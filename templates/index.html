@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PRISM — Market Intelligence Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/4.1.1/lightweight-charts.standalone.production.js"></script>
+  <link rel="stylesheet" href="/static/css/prism.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ── Header ──────────────────────────────────────────────────── -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="header-brand">
+          <span class="brand-icon">📡</span>
+          <div>
+            <h1 class="brand-title">PRISM</h1>
+            <p class="brand-sub">Predictive Reasoning and Intelligence Synthesis for Markets</p>
+          </div>
+        </div>
+        <div class="header-meta">
+          <span class="author-tag">Prof. Dr. Teik Kheong Tan · CP3405 · Singapore</span>
+          <span class="tagline-tag">"Don't predict the market. Understand it."</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Ticker input bar ─────────────────────────────────────────── -->
+    <div class="search-bar">
+      <div class="search-inner">
+        <div class="search-group">
+          <label class="search-label">TICKER</label>
+          <input id="tickerInput" class="search-input" type="text"
+                 placeholder="e.g. AAPL, MSFT, ^GSPC, ^NDX" value="AAPL" />
+        </div>
+        <div class="search-group">
+          <label class="search-label">TIMEFRAME</label>
+          <select id="timeframeSelect" class="search-select">
+            <option value="1M" selected>1 Month</option>
+            <option value="1D">1 Day</option>
+            <option value="5D">5 Days</option>
+            <option value="6M">6 Months</option>
+            <option value="YTD">Year to Date</option>
+            <option value="1Y">1 Year</option>
+            <option value="5Y">5 Years</option>
+          </select>
+        </div>
+        <button id="analyseBtn" class="btn-analyse" onclick="runAnalysis()">
+          📡 Analyse
+        </button>
+      </div>
+
+      <!-- Quick-pick tickers -->
+      <div class="quick-tickers">
+        <span class="quick-label">Quick:</span>
+        <span class="qt-group">US Tech</span>
+        <button class="qt" onclick="quickTicker('AAPL')">AAPL</button>
+        <button class="qt" onclick="quickTicker('MSFT')">MSFT</button>
+        <button class="qt" onclick="quickTicker('NVDA')">NVDA</button>
+        <button class="qt" onclick="quickTicker('TSLA')">TSLA</button>
+        <button class="qt" onclick="quickTicker('META')">META</button>
+        <button class="qt" onclick="quickTicker('AMZN')">AMZN</button>
+        <button class="qt" onclick="quickTicker('GOOG')">GOOG</button>
+        <button class="qt" onclick="quickTicker('AMD')">AMD</button>
+        <span class="qt-group">Indices</span>
+        <button class="qt qt-index" onclick="quickTicker('^GSPC')">SPX</button>
+        <button class="qt qt-index" onclick="quickTicker('^NDX')">NDX</button>
+        <button class="qt qt-index" onclick="quickTicker('^RUT')">IWM</button>
+      </div>
+    </div>
+
+    <!-- ── Loading state ────────────────────────────────────────────── -->
+    <div id="loadingState" class="loading-state hidden">
+      <div class="loader-ring"></div>
+      <p id="loadingMsg">Running PRISM analysis…</p>
+    </div>
+
+    <!-- ── Error state ───────────────────────────────────────────────── -->
+    <div id="errorState" class="error-state hidden">
+      <span class="error-icon">⚠</span>
+      <p id="errorMsg">Something went wrong.</p>
+    </div>
+
+    <!-- ── Dashboard ─────────────────────────────────────────────────── -->
+    <div id="dashboard" class="dashboard hidden">
+
+      <!-- Row 1: PRISM Alert + Price + Sentiment + EMA Zone -->
+      <div class="row row-4">
+
+        <!-- PRISM Alert (Check Engine Light) -->
+        <div class="card card-alert" id="alertCard">
+          <div class="card-label">PRISM ALERT</div>
+          <div class="alert-light" id="alertLight">🟢</div>
+          <div class="alert-level" id="alertLevel">CLEAR</div>
+          <div class="alert-msg" id="alertMsg">Signals aligned</div>
+          <div class="teach-note">
+            🎓 The PRISM Alert fires when sentiment and price trend diverge.
+            It is a "Check Engine Light" — not a buy/sell signal.
+          </div>
+        </div>
+
+        <!-- Current Price + Prediction -->
+        <div class="card">
+          <div class="card-label">PRICE SIGNAL</div>
+          <div class="price-current" id="currentPrice">—</div>
+          <div class="price-label">Current Price</div>
+          <div class="price-predicted" id="predictedPrice">→ —</div>
+          <div class="price-label">Next Session Prediction</div>
+          <div class="trend-badge" id="trendBadge">—</div>
+          <div class="teach-note">
+            🎓 Predicted by a Ridge + Random Forest ensemble on OHLCV features.
+          </div>
+        </div>
+
+        <!-- Sentiment Meter -->
+        <div class="card">
+          <div class="card-label">SENTIMENT (FinBERT)</div>
+          <div class="sentiment-score" id="sentimentScore">0.00</div>
+          <div class="sentiment-label" id="sentimentLabel">Neutral</div>
+          <div class="sentiment-bar-track">
+            <div class="sentiment-bar" id="sentimentBar"></div>
+          </div>
+          <div class="sentiment-stats" id="sentimentStats">— headlines</div>
+          <div class="teach-note">
+            🎓 FinBERT (ProsusAI) is trained on financial text — more accurate
+            than general-purpose sentiment models.
+          </div>
+        </div>
+
+        <!-- EMA Zone -->
+        <div class="card">
+          <div class="card-label">EMA SIGNAL (8/21)</div>
+          <div class="ema-zone" id="emaZone">—</div>
+          <div class="ema-vals" id="emaVals">EMA 8: — · EMA 21: —</div>
+          <div class="ema-signal" id="emaCrossSignal">—</div>
+          <div class="teach-note">
+            🎓 The 8/21 EMA cross mirrors the Technical Agent framework from
+            the DT3 Market Intelligence exercise.
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: TradingView Chart -->
+      <div class="row">
+        <div class="card card-chart">
+          <div class="card-label" id="chartLabel">CANDLESTICK CHART — AAPL</div>
+          <div id="chart"></div>
+        </div>
+      </div>
+
+      <!-- Row 3: Headlines + LLM Insights -->
+      <div class="row row-2">
+
+        <!-- Headlines -->
+        <div class="card">
+          <div class="card-label">RECENT HEADLINES</div>
+          <div id="headlinesList" class="headlines-list">
+            <p class="placeholder">Analysing…</p>
+          </div>
+        </div>
+
+        <!-- LLM Insights Panel -->
+        <div class="card">
+          <div class="card-label">LLM INSIGHTS PANEL</div>
+          <div class="llm-grid" id="llmGrid">
+            <div class="llm-loading">Loading LLM insights…</div>
+          </div>
+          <div class="teach-note">
+            🎓 All four LLMs receive the <em>identical</em> structured prompt.
+            Compare their reasoning — divergence between models is itself a signal.
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /dashboard -->
+
+    <!-- ── Footer ────────────────────────────────────────────────────── -->
+    <footer class="footer">
+      <p>PRISM · Professor Dr. Teik Kheong Tan · CP3405 Design Thinking 3 · Singapore · 2026</p>
+      <p class="disclaimer">PRISM provides decision-support signals for educational purposes only.
+         It does not constitute financial advice.</p>
+    </footer>
+
+  </div><!-- /app -->
+
+  <script src="/static/js/prism.js"></script>
+</body>
+</html>
