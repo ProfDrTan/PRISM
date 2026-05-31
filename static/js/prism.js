@@ -239,7 +239,12 @@ function initChart() {
     color:       '#3b82f6',
     priceFormat: { type: 'volume' },
     priceScaleId: 'volume',
-    scaleMargins: { top: 0.8, bottom: 0 },
+    scaleMargins: { top: 0.75, bottom: 0 },
+  });
+
+  // Give the main price scale breathing room so candles are tall
+  _chart.priceScale('right').applyOptions({
+    scaleMargins: { top: 0.05, bottom: 0.25 },
   });
 
   window.addEventListener('resize', () => {
