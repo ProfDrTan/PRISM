@@ -156,9 +156,16 @@ def analyze_ticker():
         if not report:
             return jsonify({"error": f"Could not analyse {symbol}. Check ticker or network."}), 404
 
-        # Attach cached LLM insights
+        # Attach LLM insights — generate live if no cache exists
         llm = load_cached_llm_insights(symbol)
-        report["llm_insights"] = llm.get("insights") if llm else {}
+        if llm:
+            report["llm_insights"] = llm.get("insights", {})
+        else:
+            try:
+                fresh = generate_llm_insights(report)
+                report["llm_insights"] = fresh.get("insights", {})
+            except Exception:
+                report["llm_insights"] = {}
 
         return jsonify(report)
 
