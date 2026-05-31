@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PRISM — Market Intelligence Dashboard</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/4.1.1/lightweight-charts.standalone.production.js"></script>
+  <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
   <link rel="stylesheet" href="/static/css/prism.css" />
 </head>
 <body>
@@ -146,7 +146,7 @@
       <div class="row">
         <div class="card card-chart">
           <div class="card-label" id="chartLabel">CANDLESTICK CHART — AAPL</div>
-          <div id="chart"></div>
+          <div id="chart" style="height:400px; width:100%;"></div>
         </div>
       </div>
 
