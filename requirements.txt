@@ -14,7 +14,7 @@ torch
 gunicorn
 huggingface_hub
 openai
-google-genai
+google-generativeai
 anthropic
 requests
 feedparser
