@@ -236,15 +236,21 @@ function initChart() {
   });
 
   _volumeSeries = _chart.addHistogramSeries({
-    color:       '#3b82f6',
-    priceFormat: { type: 'volume' },
-    priceScaleId: 'volume',
-    scaleMargins: { top: 0.75, bottom: 0 },
+    color:        '#3b82f6',
+    priceFormat:  { type: 'volume' },
+    priceScaleId: 'vol',
+    scaleMargins: { top: 0.80, bottom: 0 },
   });
 
-  // Give the main price scale breathing room so candles are tall
+  // Candlestick scale: full height minus bottom 20% reserved for volume
   _chart.priceScale('right').applyOptions({
-    scaleMargins: { top: 0.05, bottom: 0.25 },
+    scaleMargins: { top: 0.02, bottom: 0.20 },
+  });
+
+  // Volume scale: sits in the bottom 20% only
+  _chart.priceScale('vol').applyOptions({
+    scaleMargins: { top: 0.80, bottom: 0 },
+    visible: false,
   });
 
   window.addEventListener('resize', () => {
