@@ -209,11 +209,12 @@ function renderLLMInsights(insights) {
 
 function initChart() {
   const container = document.getElementById('chart');
+  const w = container.offsetWidth || 800;
   _chart = LightweightCharts.createChart(container, {
-    width: container.offsetWidth,
+    width: w,
     height: 400,
     layout: {
-      background: { color: '#ffffff' },
+      background: { type: 'solid', color: '#ffffff' },
       textColor:  '#475569',
     },
     grid: {
