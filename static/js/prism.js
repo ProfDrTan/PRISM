@@ -246,28 +246,47 @@ function initChart() {
   });
 }
 
+// Convert a Unix timestamp (seconds) to a YYYY-MM-DD string in UTC
+function unixToDateStr(ts) {
+  const d = new Date(ts * 1000);
+  const yyyy = d.getUTCFullYear();
+  const mm   = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd   = String(d.getUTCDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function updateChart(data, ticker) {
   if (!_candleSeries || !data || !data.length) return;
 
-  const candles = data
+  // Deduplicate by date string (keep last occurrence per day)
+  const dayMap = new Map();
+  data
     .filter(d => d.time && isFinite(d.close) && isFinite(d.open))
-    .sort((a, b) => a.time - b.time)
-    .map(d => ({
-      time:  d.time,
-      open:  d.open,
-      high:  d.high,
-      low:   d.low,
-      close: d.close,
-    }));
+    .forEach(d => {
+      const dateStr = unixToDateStr(d.time);
+      dayMap.set(dateStr, {
+        time:  dateStr,
+        open:  d.open,
+        high:  d.high,
+        low:   d.low,
+        close: d.close,
+      });
+    });
 
-  const volumes = data
+  const volMap = new Map();
+  data
     .filter(d => d.time && isFinite(d.volume))
-    .sort((a, b) => a.time - b.time)
-    .map(d => ({
-      time:  d.time,
-      value: d.volume,
-      color: d.close >= d.open ? 'rgba(22,163,74,0.3)' : 'rgba(220,38,38,0.3)',
-    }));
+    .forEach(d => {
+      const dateStr = unixToDateStr(d.time);
+      volMap.set(dateStr, {
+        time:  dateStr,
+        value: d.volume,
+        color: d.close >= d.open ? 'rgba(22,163,74,0.3)' : 'rgba(220,38,38,0.3)',
+      });
+    });
+
+  const candles = Array.from(dayMap.values()).sort((a, b) => a.time < b.time ? -1 : 1);
+  const volumes = Array.from(volMap.values()).sort((a, b) => a.time < b.time ? -1 : 1);
 
   _candleSeries.setData(candles);
   _volumeSeries.setData(volumes);
