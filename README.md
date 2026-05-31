@@ -112,3 +112,5 @@ educational purposes only.
 ---
 
 *Built with Claude (Anthropic) · Professor Dr. Teik Kheong Tan · 2026*
+
+<!-- sync trigger: 2026-05-31 -->
