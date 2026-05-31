@@ -212,7 +212,7 @@ function initChart() {
   const w = container.offsetWidth || 800;
   _chart = LightweightCharts.createChart(container, {
     width: w,
-    height: 400,
+    height: 500,
     layout: {
       background: { type: 'solid', color: '#ffffff' },
       textColor:  '#475569',
@@ -236,21 +236,10 @@ function initChart() {
   });
 
   _volumeSeries = _chart.addHistogramSeries({
-    color:        '#3b82f6',
+    color:        'rgba(59,130,246,0.4)',
     priceFormat:  { type: 'volume' },
-    priceScaleId: 'vol',
-    scaleMargins: { top: 0.80, bottom: 0 },
-  });
-
-  // Candlestick scale: full height minus bottom 20% reserved for volume
-  _chart.priceScale('right').applyOptions({
-    scaleMargins: { top: 0.02, bottom: 0.20 },
-  });
-
-  // Volume scale: sits in the bottom 20% only
-  _chart.priceScale('vol').applyOptions({
-    scaleMargins: { top: 0.80, bottom: 0 },
-    visible: false,
+    priceScaleId: '',
+    scaleMargins: { top: 0.75, bottom: 0 },
   });
 
   window.addEventListener('resize', () => {
