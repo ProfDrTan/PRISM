@@ -189,21 +189,26 @@ function renderLLMInsights(insights) {
       </div>`;
     }
 
-    // Parse regime and confidence from structured response
-    const regime     = extractField(resp, '1. REGIME')     || 'Uncertain';
-    const confidence = extractField(resp, '2. CONFIDENCE') || '—';
-    const plain      = extractField(resp, '7. PLAIN ENGLISH') || resp.slice(0, 180);
+    const regime     = extractField(resp, '1. REGIME')        || extractField(resp, 'REGIME')     || 'Uncertain';
+    const confidence = extractField(resp, '2. CONFIDENCE')    || extractField(resp, 'CONFIDENCE') || '—';
+    const plain      = extractField(resp, '7. PLAIN ENGLISH') || extractField(resp, 'PLAIN ENGLISH') || '';
+    const predicted  = extractField(resp, '6. PREDICTED MOVE')|| extractField(resp, 'PREDICTED MOVE') || '';
+    const summary    = plain || predicted || resp.slice(0, 220);
 
     const regimeClass = regime.toLowerCase().replace(/[^a-z]/g, '');
+    const regimeColor = regime.toLowerCase().includes('bull') ? '#16a34a'
+                      : regime.toLowerCase().includes('bear') ? '#dc2626'
+                      : '#94a3b8';
 
     return `<div class="llm-card">
       <div class="llm-name ${m.cls}">${m.name}</div>
-      <div class="llm-regime ${regimeClass}">${regime}</div>
-      <div class="llm-confidence">Confidence: ${confidence}</div>
-      <div class="llm-summary">${escapeHtml(plain.slice(0, 200))}</div>
+      <div class="llm-regime" style="color:${regimeColor};font-weight:700;font-size:1rem;margin:4px 0;">${regime}</div>
+      <div class="llm-confidence" style="font-size:0.8rem;color:#64748b;margin-bottom:6px;">Confidence: ${confidence}</div>
+      <div class="llm-summary" style="font-size:0.82rem;line-height:1.45;color:#334155;">${escapeHtml(summary.slice(0, 240))}</div>
     </div>`;
   }).join('');
 }
+
 
 // ── TradingView Chart ─────────────────────────────────────────────────────────
 
@@ -223,31 +228,31 @@ function initChart() {
       horzLines: { color: '#f1f5f9' },
     },
     crosshair:       { mode: LightweightCharts.CrosshairMode.Normal },
-    rightPriceScale: { borderColor: '#e2e8f0' },
+    rightPriceScale: { borderColor: '#e2e8f0', scaleMargins: { top: 0.05, bottom: 0.15 } },
     timeScale:       { borderColor: '#e2e8f0', timeVisible: true },
   });
 
-  // Candlestick series on the main right scale
+  // Candlestick series — exact IRIS colour scheme
   _candleSeries = _chart.addCandlestickSeries({
-    upColor:         '#16a34a',
-    downColor:       '#dc2626',
-    borderUpColor:   '#16a34a',
-    borderDownColor: '#dc2626',
-    wickUpColor:     '#16a34a',
-    wickDownColor:   '#dc2626',
-    priceScaleId:    'right',
-    scaleMargins:    { top: 0.02, bottom: 0.25 },
+    upColor:         '#26a69a',
+    downColor:       '#ef5350',
+    borderVisible:   false,
+    wickUpColor:     '#26a69a',
+    wickDownColor:   '#ef5350',
   });
 
-  // Volume series on a completely separate scale pinned to the bottom
+  // Volume histogram — exact IRIS pattern
   _volumeSeries = _chart.addHistogramSeries({
-    color:        'rgba(59,130,246,0.35)',
+    color:        '#26a69a',
     priceFormat:  { type: 'volume' },
-    priceScaleId: 'volume',
+    priceScaleId: 'volume_scale',
   });
 
-  _chart.priceScale('volume').applyOptions({
-    scaleMargins: { top: 0.75, bottom: 0 },
+  // Critical: call applyOptions on the SERIES priceScale — NOT the chart
+  _volumeSeries.priceScale().applyOptions({
+    scaleMargins: { top: 0.82, bottom: 0 },
+    drawTicks:    false,
+    borderVisible: false,
     visible:      false,
   });
 
@@ -266,43 +271,56 @@ function unixToDateStr(ts) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function updateChart(data, ticker) {
-  if (!_candleSeries || !data || !data.length) return;
+function updateChart(rawData, ticker) {
+  if (!_candleSeries || !rawData || !rawData.length) return;
 
-  // Deduplicate by date string (keep last occurrence per day)
-  const dayMap = new Map();
-  data
-    .filter(d => d.time && isFinite(d.close) && isFinite(d.open))
-    .forEach(d => {
-      const dateStr = unixToDateStr(d.time);
-      dayMap.set(dateStr, {
-        time:  dateStr,
-        open:  d.open,
-        high:  d.high,
-        low:   d.low,
-        close: d.close,
-      });
-    });
+  // Normalise timestamps — exact IRIS pattern
+  const normalised = [];
+  rawData.forEach(d => {
+    if (!d || typeof d !== 'object') return;
+    let t = d.time;
+    if (typeof t === 'number' && isFinite(t)) {
+      if (Math.abs(t) >= 1e12) t = Math.round(t / 1000); // ms -> s
+      else if (Math.abs(t) < 1e8) return; // invalid
+    } else if (typeof t === 'string') {
+      const n = Number(t);
+      if (!isNaN(n) && Math.abs(n) >= 1e8) {
+        t = Math.abs(n) >= 1e12 ? Math.round(n / 1000) : Math.round(n);
+      }
+    }
+    if (!t) return;
+    const close = Number(d.close ?? d.value);
+    const open  = Number(d.open  ?? close);
+    const high  = Number(d.high  ?? close);
+    const low   = Number(d.low   ?? close);
+    if (!isFinite(close)) return;
+    normalised.push({ time: t, open, high, low, close, volume: Number(d.volume) || 0 });
+  });
 
-  const volMap = new Map();
-  data
-    .filter(d => d.time && isFinite(d.volume))
-    .forEach(d => {
-      const dateStr = unixToDateStr(d.time);
-      volMap.set(dateStr, {
-        time:  dateStr,
-        value: d.volume,
-        color: d.close >= d.open ? 'rgba(22,163,74,0.3)' : 'rgba(220,38,38,0.3)',
-      });
-    });
+  // Deduplicate + sort ascending
+  const deduped = new Map();
+  normalised.forEach(p => deduped.set(String(p.time), p));
+  const sorted = Array.from(deduped.values()).sort((a, b) => {
+    const toN = t => typeof t === 'number' ? t : Date.parse(String(t)) / 1000;
+    return toN(a.time) - toN(b.time);
+  });
 
-  const candles = Array.from(dayMap.values()).sort((a, b) => a.time < b.time ? -1 : 1);
-  const volumes = Array.from(volMap.values()).sort((a, b) => a.time < b.time ? -1 : 1);
+  if (!sorted.length) return;
+
+  const candles = sorted.map(p => ({ time: p.time, open: p.open, high: p.high, low: p.low, close: p.close }));
+  const volumes = sorted.map((p, i) => ({
+    time:  p.time,
+    value: p.volume,
+    color: i > 0 && p.close < sorted[i-1].close ? 'rgba(239,83,80,0.4)' : 'rgba(38,166,154,0.4)',
+  }));
 
   _candleSeries.setData(candles);
-  _volumeSeries.setData(volumes);
+  if (volumes.some(v => v.value > 0)) {
+    _volumeSeries.setData(volumes);
+  }
   _chart.timeScale().fitContent();
 }
+
 
 async function fetchAndRenderChart(ticker, timeframe) {
   const tfMap = {
