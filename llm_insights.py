@@ -54,6 +54,7 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY") or None
 OPENAI_API_KEY    = os.environ.get("OPENAI_API_KEY")    or None
 GOOGLE_API_KEY    = os.environ.get("GOOGLE_API_KEY")    or None
 DEEPSEEK_API_KEY  = os.environ.get("DEEPSEEK_API_KEY")  or None
+XAI_API_KEY       = os.environ.get("XAI_API_KEY")        or None
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 LLM_REPORTS_DIR = PROJECT_ROOT / "data" / "LLM_reports"
@@ -155,6 +156,22 @@ def _query_gemini(prompt: str) -> dict:
         return {"model": "gemini", "status": "error", "error": str(e), "response": None}
 
 
+def _query_grok(prompt: str) -> dict:
+    if not _HAS_OPENAI or not XAI_API_KEY:
+        return {"model": "grok", "status": "unavailable", "response": None}
+    try:
+        client = _OpenAI(api_key=XAI_API_KEY, base_url="https://api.x.ai/v1")
+        resp = client.chat.completions.create(
+            model="grok-3",
+            max_tokens=600,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = resp.choices[0].message.content if resp.choices else ""
+        return {"model": "grok", "status": "ok", "response": text}
+    except Exception as e:
+        return {"model": "grok", "status": "error", "error": str(e), "response": None}
+
+
 def generate_llm_insights(report: dict) -> dict:
     """
     Query all four LLMs with identical prompts and return a structured
@@ -188,6 +205,7 @@ def generate_llm_insights(report: dict) -> dict:
         "chatgpt":  _query_chatgpt(prompt),
         "deepseek": _query_deepseek(prompt),
         "gemini":   _query_gemini(prompt),
+        "grok":     _query_grok(prompt),
     }
 
     payload = {
