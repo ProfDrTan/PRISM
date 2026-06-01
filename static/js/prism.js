@@ -210,42 +210,52 @@ function renderLLMInsights(insights) {
 function initChart() {
   const container = document.getElementById('chart');
   const w = container.offsetWidth || 800;
+
   _chart = LightweightCharts.createChart(container, {
-    width: w,
+    width:  w,
     height: 500,
     layout: {
       background: { type: 'solid', color: '#ffffff' },
       textColor:  '#475569',
     },
     grid: {
-      vertLines:  { color: '#f1f5f9' },
-      horzLines:  { color: '#f1f5f9' },
+      vertLines: { color: '#f1f5f9' },
+      horzLines: { color: '#f1f5f9' },
     },
-    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    crosshair:       { mode: LightweightCharts.CrosshairMode.Normal },
     rightPriceScale: { borderColor: '#e2e8f0' },
-    timeScale: { borderColor: '#e2e8f0', timeVisible: true },
+    timeScale:       { borderColor: '#e2e8f0', timeVisible: true },
   });
 
+  // Candlestick series on the main right scale
   _candleSeries = _chart.addCandlestickSeries({
-    upColor:   '#16a34a',
-    downColor: '#dc2626',
+    upColor:         '#16a34a',
+    downColor:       '#dc2626',
     borderUpColor:   '#16a34a',
     borderDownColor: '#dc2626',
     wickUpColor:     '#16a34a',
     wickDownColor:   '#dc2626',
+    priceScaleId:    'right',
+    scaleMargins:    { top: 0.02, bottom: 0.25 },
   });
 
+  // Volume series on a completely separate scale pinned to the bottom
   _volumeSeries = _chart.addHistogramSeries({
-    color:        'rgba(59,130,246,0.4)',
+    color:        'rgba(59,130,246,0.35)',
     priceFormat:  { type: 'volume' },
-    priceScaleId: '',
+    priceScaleId: 'volume',
+  });
+
+  _chart.priceScale('volume').applyOptions({
     scaleMargins: { top: 0.75, bottom: 0 },
+    visible:      false,
   });
 
   window.addEventListener('resize', () => {
     _chart.applyOptions({ width: container.offsetWidth });
   });
 }
+
 
 // Convert a Unix timestamp (seconds) to a YYYY-MM-DD string in UTC
 function unixToDateStr(ts) {
