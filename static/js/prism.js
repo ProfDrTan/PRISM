@@ -170,6 +170,7 @@ function renderLLMInsights(insights) {
     { key: 'chatgpt',  name: '🟢 ChatGPT (OpenAI)',    cls: 'chatgpt'  },
     { key: 'deepseek', name: '🔵 DeepSeek',            cls: 'deepseek' },
     { key: 'gemini',   name: '🟣 Gemini (Google)',     cls: 'gemini'   },
+    { key: 'grok',     name: '⚫ Grok (xAI)',            cls: 'grok'     },
   ];
 
   if (!insights || !Object.keys(insights).length) {
